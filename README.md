@@ -109,8 +109,8 @@ See [`include/ctcs_stc/USAGE.md`](include/ctcs_stc/USAGE.md) for how to write an
 - `stc_landing` is tuned for its default start; other initial conditions may need retuning.
 - Vector-space states only (`ndx == nx`). `stc_landing` carries the quaternion as a plain
   R^4 block renormalized after each step, not as a manifold state.
-- The spec caches its last evaluation on exact `(x, u)`. If the interval dynamics read
-  externals that change between solves, rebuild the stages.
+- `IntervalConstraint` reuses its integration on exact `(x, u)`. If the ODE reads externals
+  that change between solves, rebuild the stages.
 
 ## Citing
 If you use this interface, please cite the works it builds on:
