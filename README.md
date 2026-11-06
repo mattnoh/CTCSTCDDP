@@ -36,8 +36,9 @@ integrating an extra state `y' = H` with the same RK4 steps (checked in `tests/`
 include/ctcs_stc/spec.hpp            the constraint (Eigen only): implications, forms, quadrature, derivatives
 include/ctcs_stc/stage_function.hpp  Aligator adapter (aligator::StageFunctionTpl)
 examples/pointmass_sphere.cpp        CTCS: point mass past a sphere (Elango 2025 setup)
-examples/stc_landing.cpp             STC: glideslope + landing speed below a trigger altitude
-examples/point_mass.hpp              dynamics/costs shared by the examples and tests
+examples/stc_landing.cpp             STC: quadrotor landing, free final time, 8 rules in one CTCS row
+examples/point_mass.hpp              point-mass dynamics/costs (pointmass_sphere, tests)
+examples/quadrotor.hpp               quadrotor dynamics: RK4 step with free step length (stc_landing)
 tests/test_spec.cpp                  FD Jacobians, non-augmented == RK4 accumulator, adapter == spec
 third_party/aligator                 Aligator as a git submodule (upstream main)
 ```
@@ -70,7 +71,8 @@ cmake --build build -j
 export LD_LIBRARY_PATH=$PWD/install/lib:<deps prefix>/lib
 ctest --test-dir build --output-on-failure
 ./build/pointmass_sphere
-./build/stc_landing
+./build/stc_landing                                   # default IC
+./build/stc_landing r0x r0y r0z v0x v0y v0z [csv_prefix]   # own IC, optional CSV export
 ```
 `LD_LIBRARY_PATH` is needed because `libaligator.so` carries `RUNPATH=$ORIGIN`. An
 executable's rpath therefore cannot resolve libaligator's own dependencies (libfmt, libmimalloc).
@@ -162,17 +164,17 @@ stages.
 | example | result |
 |---|---|
 | `pointmass_sphere` | converges, 36 iterations; densely resampled clearance 13.07 mm (margin delta 11.70 mm) |
-| `stc_landing` | glideslope satisfied between nodes; **does not converge at tol 1e-6** (see below) |
+| `stc_landing` | 10 sampled ICs: 10/10 land and satisfy every rule (thesis node audit); ProxDDP's own convergence flag is set on 4/10, iterations 59-3000. The default IC fails (line search, not landed). |
+
+`stc_landing` reproduces the single-horizon landing OCP of the CT-cSTC thesis code. The weights
+of that profile do not transfer to ProxDDP; what changed is scaling only: each consequence
+divided by its own limit with weight 1 (Elango 2025, Sec. 6), the interval budget `EPS_INT`,
+the step-length regularization of the thesis defaults, cost x1e-2, and controls in scaled
+units. The rules themselves are unchanged.
 
 ## Limitations
-- **Vanishing gradient at the trigger surface.** The density `[-g]_+^2 [c]_+^2` and its gradient
-  are zero exactly where the trigger switches on. If the optimum wants the consequence active
-  right at that surface (landing speed at the trigger altitude, for instance), the active row
-  has a near-zero gradient. You then see a residual violation at trigger onset (about 0.14 m/s
-  in `stc_landing`) and ProxDDP stalls on dual feasibility. It does converge at tol 1e-4.
-  This comes from the multiplicative STC form, not from the adapter.
-- Vector-space states only (`ndx == nx`). Quaternion states would need the tangent-space
-  Jacobian.
+- Vector-space states only (`ndx == nx`). `stc_landing` carries the quaternion as a plain
+  R^4 block renormalized after each step, not as a manifold state.
 - The spec caches its last evaluation on exact `(x, u)`. If the interval dynamics read
   externals that change between solves, rebuild the stages.
 
