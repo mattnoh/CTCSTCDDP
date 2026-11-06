@@ -229,8 +229,7 @@ for an external grader.
 - Controls are **zero-order hold** inside an interval.
 - `LD_LIBRARY_PATH` must contain Aligator's lib and its dependencies' lib at run time.
 - Results can be **sensitive to tuning and rounding**: in the quadrotor example, changes that
-  only moved the last bits of a Jacobian reshuffled which initial conditions failed. Judge a
-  setting on many initial conditions and keep a held-out set; 10 is not enough.
+  only moved the last bits of a Jacobian changed which initial conditions solved.
 - ProxDDP often stops at the iteration cap with a feasible trajectory on hard STC problems;
   check compliance (section 8) rather than the flag.
 

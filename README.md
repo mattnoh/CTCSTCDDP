@@ -176,7 +176,7 @@ stage gets its own copy of the spec; editing `spec` afterwards doesn't reach the
 | example | result |
 |---|---|
 | `pointmass_sphere` | converges, 36 iterations; densely resampled clearance 13.07 mm (margin delta 11.70 mm) |
-| `stc_landing` | 100 sampled ICs (thesis benchmark samples, thesis node audit): 90/100 land and satisfy every rule (tuned on s00-s29: 27/30; held out s30-s99: 63/70). Default IC lands, compliant. ProxDDP's own convergence flag is rarely set (11/100); most runs stop at the 3000-iteration cap with a feasible, landed trajectory. |
+| `stc_landing` | from r0 = (-2.52, 1.86, 2.83), v0 = (2.04, -1.36, 0.89): converges, 1100 iterations, T* = 8.2 s, lands within 0.1 mm. Densely resampled, path, staging, line-of-sight and glideslope rules hold; landing speed and tilt exceed their limits by at most 0.02 m/s and 0.1 deg, just below the trigger altitude. Not every initial condition solves this cleanly, including the built-in default. |
 
 `stc_landing` reproduces the single-horizon landing OCP of the CT-cSTC thesis code. The weights
 of that profile do not transfer to ProxDDP; what changed is scaling only: each consequence
@@ -184,10 +184,8 @@ divided by its own limit with weight 1 (Elango 2025, Sec. 6), the interval budge
 the step-length regularization of the thesis defaults, cost x1e-2, and controls in scaled
 units. The rules themselves are unchanged.
 
-Tuning (scaling and solver options only): `EPS_INT = 1e-6` and Aligator's filter step
-acceptance (`StepAcceptanceStrategy::FILTER`). The solve is sensitive to rounding and to
-which ICs a setting is tuned on: changes that only move the last bits of the dynamics
-Jacobians reshuffle which ICs fail, so judge a setting on many ICs, not a handful.
+Solver settings: `EPS_INT = 1e-6` and Aligator's filter step acceptance
+(`StepAcceptanceStrategy::FILTER`).
 
 ## Limitations
 - Vector-space states only (`ndx == nx`). `stc_landing` carries the quaternion as a plain

@@ -361,7 +361,7 @@ int main(int argc, char **argv) {
     xs[k + 1](2) = std::max(xs[k + 1](2), 0.0);
   }
 
-  // Filter step acceptance (Aligator option): tuned on s00-s29, checked on s30-s99.
+  // Filter step acceptance (Aligator option).
   aligator::context::SolverProxDDP solver(TOL, MU_INIT, MAX_ITERS, aligator::QUIET,
                                           aligator::StepAcceptanceStrategy::FILTER);
   solver.setNumThreads(1);
