@@ -11,6 +11,16 @@ A header-only C++ interface that adds two kinds of path constraint to
 Each one becomes an ordinary Aligator stage constraint, a row `c_k(x_k, u_k) <= 0` on stage
 `k`, so the solver itself is unchanged.
 
+<table>
+  <tr>
+    <td width="38%"><img src="docs/stc_landing_3d.png" alt="3D quadrotor landing trajectory"></td>
+    <td width="62%"><img src="docs/stc_landing_states.png" alt="State histories with limits and triggers"></td>
+  </tr>
+</table>
+
+`examples/stc_landing.cpp`: a quadrotor landing with eight state-triggered rules in one CTCS row
+per interval, free final time, solved by ProxDDP.
+
 ## Method
 This repo implements published methods; it does not introduce a new formulation:
 state-triggered constraints (STC, Szmuk et al.), continuous-time constraint satisfaction
@@ -44,6 +54,7 @@ examples/point_mass.hpp                   point-mass ODE and costs (pointmass_sp
 examples/quadrotor.hpp                    quadrotor ODE, control scaling, quaternion projection (stc_landing)
 tests/test_spec.cpp                       FD Jacobians (integrator, rows), row == augmented accumulator, curvature
 aligator/                                 Aligator as a git submodule (upstream main)
+docs/                                     figures
 ```
 
 ## Building
@@ -176,16 +187,15 @@ stage gets its own copy of the spec; editing `spec` afterwards doesn't reach the
 | example | result |
 |---|---|
 | `pointmass_sphere` | converges, 36 iterations; densely resampled clearance 13.07 mm (margin delta 11.70 mm) |
-| `stc_landing` | from r0 = (-2.52, 1.86, 2.83), v0 = (2.04, -1.36, 0.89): converges, 1100 iterations, T* = 8.2 s, lands within 0.1 mm. Densely resampled, path, staging, line-of-sight and glideslope rules hold; landing speed and tilt exceed their limits by at most 0.02 m/s and 0.1 deg, just below the trigger altitude. Not every initial condition solves this cleanly, including the built-in default. |
+| `stc_landing` | default start r0 = (2.4, 2.0, 2.0), v0 = (0, -2, 0): converges, 1110 iterations, T* = 8.5 s, lands within 0.1 mm. Densely resampled, the path, staging, line-of-sight, glideslope and landing angular-rate rules hold; landing speed and tilt exceed their limits by at most 0.005 m/s and 0.1 deg. Other initial conditions may need retuning. |
 
 `stc_landing` reproduces the single-horizon landing OCP of the CT-cSTC thesis code. The weights
 of that profile do not transfer to ProxDDP; what changed is scaling only: each consequence
 divided by its own limit with weight 1 (Elango 2025, Sec. 6), the interval budget `EPS_INT`,
-the step-length regularization of the thesis defaults, cost x1e-2, and controls in scaled
+a light step-length regularization, cost x1e-2, and controls in scaled
 units. The rules themselves are unchanged.
 
-Solver settings: `EPS_INT = 1e-6` and Aligator's filter step acceptance
-(`StepAcceptanceStrategy::FILTER`).
+Settings: `EPS_INT = 1e-6`, `R_THETA = 3`, Aligator's default step acceptance.
 
 ## Limitations
 - Vector-space states only (`ndx == nx`). `stc_landing` carries the quaternion as a plain

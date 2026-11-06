@@ -166,8 +166,7 @@ for (int k = 0; k < N; ++k) {
 }
 aligator::context::TrajOptProblem problem(x0, stages, terminal_cost);
 
-aligator::context::SolverProxDDP solver(/*tol=*/1e-4, /*mu_init=*/0.1, /*max_iters=*/3000,
-                                        aligator::QUIET, aligator::StepAcceptanceStrategy::FILTER);
+aligator::context::SolverProxDDP solver(/*tol=*/1e-4, /*mu_init=*/0.1, /*max_iters=*/3000);
 solver.setup(problem);
 solver.run(problem, xs_guess, us_guess);
 const auto &r = solver.results_;          // r.xs, r.us, r.num_iters, r.prim_infeas, r.dual_infeas

@@ -14,7 +14,7 @@
 //   * each consequence is divided by its own limit (Elango 2025, Sec. 6), weight 1, so
 //     the row is  sum_i I_i / EPS_INT - 1 <= 0  with every I_i a dimensionless fraction;
 //   * controls in scaled units (quadrotor.hpp), cost multiplied by COST_SCALE;
-//   * step-length regularization R_theta (theta - 0.10)^2, the thesis default.
+//   * light step-length regularization R_theta (theta - 0.10)^2, tuned for this example.
 //
 // Usage: stc_landing [r0x r0y r0z v0x v0y v0z [csv_prefix]]     (default 2.4 2.0 2.0 0 -2 0)
 //   csv_prefix writes <prefix>.csv (nodes) and <prefix>_dense.csv (20 samples per interval)
@@ -48,7 +48,7 @@ const double TAU_MAX = 0.046 * (0.60 / 4.0 - 0.08 / 4.0) * J_SCALE;
 constexpr double V_MAX = 3.0;  // general speed cap
 
 // Costs (physical units), then scaled as a whole.
-constexpr double W_TIME = 0.04, R_THR = 2.0, R_MOM = 0.6, R_THETA = 10.0, TH_REF = 0.10;
+constexpr double W_TIME = 0.04, R_THR = 2.0, R_MOM = 0.6, R_THETA = 3.0, TH_REF = 0.10;
 constexpr double TW_POS = 2500.0, TW_VEL = 900.0, TW_TILT = 200.0, TW_OM = 50.0;
 constexpr double COST_SCALE = 1e-2;
 
@@ -65,7 +65,7 @@ const double TILT_LAND = 0.95 * DEG, GS_TAN = std::tan(15.0 * DEG);
 // the glideslope residual [m] is measured in.
 constexpr double EPS_INT = 1e-6, GS_LENGTH = 0.1;
 
-// Solver (ProxDDP, filter step acceptance)
+// Solver
 constexpr double TOL = 1e-4, MU_INIT = 0.1;
 constexpr std::size_t MAX_ITERS = 3000;
 
@@ -361,9 +361,7 @@ int main(int argc, char **argv) {
     xs[k + 1](2) = std::max(xs[k + 1](2), 0.0);
   }
 
-  // Filter step acceptance (Aligator option).
-  aligator::context::SolverProxDDP solver(TOL, MU_INIT, MAX_ITERS, aligator::QUIET,
-                                          aligator::StepAcceptanceStrategy::FILTER);
+  aligator::context::SolverProxDDP solver(TOL, MU_INIT, MAX_ITERS);
   solver.setNumThreads(1);
   solver.setup(problem);
   const auto t0 = std::chrono::steady_clock::now();
