@@ -16,9 +16,8 @@
 //   * controls in scaled units (quadrotor.hpp), cost multiplied by COST_SCALE;
 //   * light step-length regularization R_theta (theta - 0.10)^2, tuned for this example.
 //
-// Usage: stc_landing [r0x r0y r0z v0x v0y v0z [csv_prefix]]     (default 2.4 2.0 2.0 0 -2 0)
-//   csv_prefix writes <prefix>.csv (nodes) and <prefix>_dense.csv (20 samples per interval)
-//   in the column layout of the thesis graders.
+// Usage: stc_landing [csv_prefix]
+//   csv_prefix writes <prefix>.csv (nodes) and <prefix>_dense.csv (20 samples per interval).
 #include "quadrotor.hpp"
 
 #include "ctcs_stc/interval_constraint.hpp"
@@ -326,12 +325,9 @@ void writeCsv(const std::string &prefix, const ctcs_stc::Spec &rules, const std:
 }  // namespace
 
 int main(int argc, char **argv) {
-  double ic[6] = {2.4, 2.0, 2.0, 0.0, -2.0, 0.0};
-  if (argc >= 7)
-    for (int i = 0; i < 6; ++i) ic[i] = std::atof(argv[i + 1]);
-  const std::string csv_prefix = argc >= 8 ? argv[7] : "";
+  const std::string csv_prefix = argc >= 2 ? argv[1] : "";
   V x0 = V::Zero(NX);
-  x0 << ic[0], ic[1], ic[2], ic[3], ic[4], ic[5], 1, 0, 0, 0, 0, 0, 0, 0;
+  x0 << 2.4, 2.0, 2.0, 0.0, -2.0, 0.0, 1, 0, 0, 0, 0, 0, 0, 0;  // r, v, q, omega, t
 
   aligator::context::VectorSpace space(NX);
   // Free time: the interval length is u(IDX_THETA); quaternion renormalized after each step.
@@ -382,7 +378,6 @@ int main(int argc, char **argv) {
     T += up(IDX_THETA);
   }
   nodes.add(r.xs[N]);
-  std::printf("IC r0=(%.2f %.2f %.2f) v0=(%.2f %.2f %.2f)\n", ic[0], ic[1], ic[2], ic[3], ic[4], ic[5]);
   std::printf("solver flag=%d iters=%zu time=%.0f ms prim=%.1e dual=%.1e  T*=%.3f s  terminal |r|=%.2e |v|=%.2e\n",
               converged, static_cast<std::size_t>(r.num_iters), ms, r.prim_infeas, r.dual_infeas, T,
               r.xs[N].head<3>().norm(), r.xs[N].segment<3>(3).norm());

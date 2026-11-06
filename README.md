@@ -85,8 +85,7 @@ cmake --build build -j
 export LD_LIBRARY_PATH=$PWD/install/lib:<deps prefix>/lib
 ctest --test-dir build --output-on-failure
 ./build/pointmass_sphere
-./build/stc_landing                                   # default IC
-./build/stc_landing r0x r0y r0z v0x v0y v0z [csv_prefix]   # own IC, optional CSV export
+./build/stc_landing
 ```
 `LD_LIBRARY_PATH` is needed because `libaligator.so` carries `RUNPATH=$ORIGIN`. An
 executable's rpath therefore cannot resolve libaligator's own dependencies (libfmt, libmimalloc).
@@ -106,7 +105,6 @@ the quadrature, so a Python callback there would be slow.
 See [`include/ctcs_stc/USAGE.md`](include/ctcs_stc/USAGE.md) for how to write an OCP with this interface.
 
 ## Limitations
-- `stc_landing` is tuned for its default start; other initial conditions may need retuning.
 - Vector-space states only (`ndx == nx`). `stc_landing` carries the quaternion as a plain
   R^4 block renormalized after each step, not as a manifold state.
 - `IntervalConstraint` reuses its integration on exact `(x, u)`. If the ODE reads externals
