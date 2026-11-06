@@ -105,21 +105,8 @@ the quadrature, so a Python callback there would be slow.
 ## Usage
 See [`include/ctcs_stc/USAGE.md`](include/ctcs_stc/USAGE.md) for how to write an OCP with this interface.
 
-## Results of the shipped examples
-| example | result |
-|---|---|
-| `pointmass_sphere` | converges, 36 iterations; densely resampled clearance 13.07 mm (margin delta 11.70 mm) |
-| `stc_landing` | default start r0 = (2.4, 2.0, 2.0), v0 = (0, -2, 0): converges, 1110 iterations, T* = 8.5 s, lands within 0.1 mm. Densely resampled, the path, staging, line-of-sight, glideslope and landing angular-rate rules hold; landing speed and tilt exceed their limits by at most 0.005 m/s and 0.1 deg. Other initial conditions may need retuning. |
-
-`stc_landing` reproduces the single-horizon landing OCP of the CT-cSTC thesis code. The weights
-of that profile do not transfer to ProxDDP; what changed is scaling only: each consequence
-divided by its own limit with weight 1 (Elango 2025, Sec. 6), the interval budget `EPS_INT`,
-a light step-length regularization, cost x1e-2, and controls in scaled
-units. The rules themselves are unchanged.
-
-Settings: `EPS_INT = 1e-6`, `R_THETA = 3`, Aligator's default step acceptance.
-
 ## Limitations
+- `stc_landing` is tuned for its default start; other initial conditions may need retuning.
 - Vector-space states only (`ndx == nx`). `stc_landing` carries the quaternion as a plain
   R^4 block renormalized after each step, not as a manifold state.
 - The spec caches its last evaluation on exact `(x, u)`. If the interval dynamics read
