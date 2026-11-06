@@ -26,21 +26,23 @@ For interval `k` the interface computes
 I_k = ∫_{t_k}^{t_k+1} H(x(t), u(t)) dt,     H = Σ_i w_i [-g_i(x)]_+^2 [s_i c_i(x,u)]_+^2
 ```
 
-along the continuous dynamics starting at `x_k`, and emits `I_k - eps <= 0`. `I_k` depends on
+along the stage's own dynamics starting at `x_k` (the RK4 stage points of
+`ctcs_stc::IntegratorRK4`, Simpson weights), and emits `I_k - eps <= 0`. `I_k` depends on
 `(x_k, u_k)` only, so **no accumulator state is added**. This is the non-augmented form
 (Elango 2025, eq. 34). It also holds for nonlinear dynamics, and it is numerically identical to
 integrating an extra state `y' = H` with the same RK4 steps (checked in `tests/`).
 
 ## Layout
 ```
-include/ctcs_stc/spec.hpp            the constraint (Eigen only): implications, forms, quadrature, derivatives
-include/ctcs_stc/stage_function.hpp  Aligator adapter (aligator::StageFunctionTpl)
-examples/pointmass_sphere.cpp        CTCS: point mass past a sphere (Elango 2025 setup)
-examples/stc_landing.cpp             STC: quadrotor landing, free final time, 8 rules in one CTCS row
-examples/point_mass.hpp              point-mass dynamics/costs (pointmass_sphere, tests)
-examples/quadrotor.hpp               quadrotor dynamics: RK4 step with free step length (stc_landing)
-tests/test_spec.cpp                  FD Jacobians, non-augmented == RK4 accumulator, adapter == spec
-third_party/aligator                 Aligator as a git submodule (upstream main)
+include/ctcs_stc/spec.hpp                 authoring: implications, forms, eps, pointwise density
+include/ctcs_stc/integrator_rk4.hpp       RK4 integrator for Aligator ODE models (free time, substeps, projection)
+include/ctcs_stc/interval_constraint.hpp  the rows: an aligator::StageFunctionTpl built from a Spec and the integrator
+examples/pointmass_sphere.cpp             CTCS: point mass past a sphere (Elango 2025 setup)
+examples/stc_landing.cpp                  STC: quadrotor landing, free final time, 8 rules in one CTCS row
+examples/point_mass.hpp                   point-mass ODE and costs (pointmass_sphere)
+examples/quadrotor.hpp                    quadrotor ODE, control scaling, quaternion projection (stc_landing)
+tests/test_spec.cpp                       FD Jacobians (integrator, rows), row == augmented accumulator, curvature
+third_party/aligator                      Aligator as a git submodule (upstream main)
 ```
 
 ## Building
@@ -90,12 +92,34 @@ the quadrature, so a Python callback there would be slow.
 
 ## Writing an OCP
 
-### 1. Write the constraint
+### 1. Write the model once, as an Aligator ODE
 ```cpp
-#include "ctcs_stc/stage_function.hpp"
+#include "ctcs_stc/interval_constraint.hpp"
 using V = Eigen::VectorXd;
 
-ctcs_stc::Spec<double> spec(ctcs_stc::Form::Density, /*eps=*/1.0);
+struct MyODE : aligator::dynamics::ODEAbstractTpl<double> {
+  using Base = aligator::dynamics::ODEAbstractTpl<double>;
+  using Data = aligator::dynamics::ContinuousDynamicsDataTpl<double>;
+  explicit MyODE(const aligator::context::VectorSpace& space) : Base(space, NU) {}
+  void forward(const ConstVectorRef& x, const ConstVectorRef& u, Data& d) const override { d.xdot_ = ...; }
+  void dForward(const ConstVectorRef& x, const ConstVectorRef& u, Data& d) const override { d.Jx_ = ...; d.Ju_ = ...; }
+};
+```
+
+### 2. Make the stage dynamics from it
+```cpp
+aligator::context::VectorSpace space(NX);
+const ctcs_stc::IntegratorRK4 dynamics(MyODE(space), DT, /*substeps=*/4);          // fixed step
+// const ctcs_stc::IntegratorRK4 dynamics(MyODE(space), ctcs_stc::FreeTime{j});    // free time: h = u(j)
+// optional 4th argument: a projection after each step, e.g. ctcs_stc::normalizeSegment<double>(6, 4)
+```
+`IntegratorRK4` is an ordinary `aligator::dynamics::ExplicitIntegratorAbstractTpl`. Aligator
+itself ships Euler, semi-implicit Euler, midpoint and RK2; RK4 is added here because the row's
+quadrature is the RK4 one.
+
+### 3. Write the constraint
+```cpp
+ctcs_stc::Spec spec(ctcs_stc::Form::Density, /*eps=*/1.0);
 
 spec.add("landing_speed")                                     // one implication
     .triggerWhenNegative(
@@ -116,26 +140,11 @@ spec.add("landing_speed")                                     // one implication
   `.finiteDifference()` on that implication to opt in to central differences. A missing
   Jacobian throws. Autodiff is deliberately not offered; see the note in `spec.hpp`.
 
-### 2. Give it the continuous dynamics
-```cpp
-ctcs_stc::IntervalDynamics<double> dyn;
-dyn.xdot = [](const V& x, const V& u, double tau) { ... };   // f(x,u)
-dyn.fx   = [](const V& x, const V& u, double tau) { ... };   // df/dx
-dyn.fu   = [](const V& x, const V& u, double tau) { ... };   // df/du
-dyn.dt = DT;            // fixed step ...
-// dyn.idx_theta = j;   // ... or free time: u(j) is the interval length
-dyn.substeps = 2;       // RK4 steps per interval used by the quadrature
-spec.setIntervalDynamics(dyn);
-```
-**This must be the same model your discrete dynamics steps.** The integral is taken along
-`xdot` from `x_k`. If that differs from the solver's `x_{k+1} = f_d(x_k, u_k)`, the
-constraint is checked along a trajectory the solver isn't actually following.
-
-### 3. Add it to the stages and solve
+### 4. Add it to the stages and solve
 ```cpp
 for (int k = 0; k < N; ++k) {
   aligator::context::StageModel stage(cost, dynamics);
-  stage.addConstraint(ctcs_stc::StageFunction(nx, nu, spec),
+  stage.addConstraint(ctcs_stc::IntervalConstraint(spec, dynamics),
                       aligator::NegativeOrthantTpl<double>());     // rows are <= 0
   stages.emplace_back(stage);
 }
@@ -144,8 +153,9 @@ aligator::context::SolverProxDDP solver(1e-5, 1e-2, 500);
 solver.setup(problem);
 solver.run(problem, xs_guess, us_guess);
 ```
-Each stage gets its own copy of the spec. Editing `spec` after this point doesn't reach the
-stages.
+`IntervalConstraint` copies the integrator's ODE, step rule and substeps, so the row is always
+integrated along the dynamics the solver steps; you cannot hand it a different model. Each
+stage gets its own copy of the spec; editing `spec` afterwards doesn't reach the stages.
 
 ## Rules that decide whether it works
 - **Scale every consequence to its own limit** (`1 - |p-o|/r`, `|a|/a_max - 1`, or
@@ -153,10 +163,9 @@ stages.
 - **Choose `eps` from the bound you need.** For `[c]_+^2` the pointwise violation is bounded
   as in Elango 2025, Theorem 10. `pointmass_sphere` uses it to set the margin `delta` that keeps
   the exact flow outside the sphere.
-- **Controls that vary inside an interval** (first-order hold) need `IntervalDynamics::control`
-  (+ `control_dx`, `control_du`), with the left knot carried in the state. Zero-order hold
-  needs nothing.
-- **Curvature.** `StageFunction` provides the Gauss-Newton term of the row through
+- **Controls are held constant over the interval** (zero-order hold). A first-order-hold
+  hook existed in the ALIPDDP port and is not carried over.
+- **Curvature.** `IntervalConstraint` provides the Gauss-Newton term of the row through
   `computeVectorHessianProducts`. ProxDDP only calls it with `HessianApprox::EXACT`. Under the
   default `GAUSS_NEWTON` the rows are first-order. `Curvature::None` forces first-order.
 
@@ -164,13 +173,18 @@ stages.
 | example | result |
 |---|---|
 | `pointmass_sphere` | converges, 36 iterations; densely resampled clearance 13.07 mm (margin delta 11.70 mm) |
-| `stc_landing` | 10 sampled ICs: 10/10 land and satisfy every rule (thesis node audit); ProxDDP's own convergence flag is set on 4/10, iterations 59-3000. The default IC fails (line search, not landed). |
+| `stc_landing` | 10 sampled ICs: 9/10 land and satisfy every rule (thesis node audit), one (s09) does not land; ProxDDP's own convergence flag is set on 4/10, iterations 59-3000. The default IC fails (line search, not landed). |
 
 `stc_landing` reproduces the single-horizon landing OCP of the CT-cSTC thesis code. The weights
 of that profile do not transfer to ProxDDP; what changed is scaling only: each consequence
 divided by its own limit with weight 1 (Elango 2025, Sec. 6), the interval budget `EPS_INT`,
 the step-length regularization of the thesis defaults, cost x1e-2, and controls in scaled
 units. The rules themselves are unchanged.
+
+The solve is sensitive to rounding: the previous hand-written discrete step and this
+`IntegratorRK4` give bit-identical rows and next states and differ only in the last bits of
+the control Jacobian (scaling applied inside the ODE) and of the time state, yet the
+10-IC result moves from 10/10 to 9/10 and the iteration counts change.
 
 ## Limitations
 - Vector-space states only (`ndx == nx`). `stc_landing` carries the quaternion as a plain
