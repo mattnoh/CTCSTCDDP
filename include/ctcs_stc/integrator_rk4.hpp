@@ -15,7 +15,7 @@
 /// is applied ONCE after the full step (e.g. renormalising a quaternion block);
 /// the stage points inside the interval are not projected.
 ///
-/// @author <AUTHOR>
+/// @author mattnoh
 #pragma once
 
 #include <aligator/modelling/dynamics/integrator-explicit.hpp>

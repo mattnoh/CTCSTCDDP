@@ -53,7 +53,7 @@ Pick one of the two.
 
 **From the submodule** (C++ only, no Python):
 ```bash
-git clone --recursive <this repo> && cd <this repo>      # or: git submodule update --init --recursive
+git clone --recursive git@github.com:mattnoh/CTCSTCDDP.git && cd CTCSTCDDP   # or: git submodule update --init --recursive
 cmake -S third_party/aligator -B third_party/aligator/build -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=$PWD/install \
   -DBUILD_PYTHON_INTERFACE=OFF -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_DOCUMENTATION=OFF \
@@ -196,5 +196,5 @@ Jacobians reshuffle which ICs fail, so judge a setting on many ICs, not a handfu
   externals that change between solves, rebuild the stages.
 
 ## Author and license
-Author: `<AUTHOR>`. There is no license file yet. Without one, others cannot legally reuse the
+Author: mattnoh. There is no license file yet. Without one, others cannot legally reuse the
 code. Add one (Aligator uses BSD-2) before publishing if you want it reused.

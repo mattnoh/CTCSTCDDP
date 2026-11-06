@@ -23,7 +23,7 @@
 /// constraint's Data, created by Aligator per stage, so stages can be evaluated
 /// in parallel.
 ///
-/// @author <AUTHOR>
+/// @author mattnoh
 #pragma once
 
 #include "ctcs_stc/integrator_rk4.hpp"

@@ -37,7 +37,7 @@
 /// Supply analytic Jacobians, or opt in to central differences per implication
 /// with `.finiteDifference()`.  A missing Jacobian without that opt-in throws.
 ///
-/// @author <AUTHOR>
+/// @author mattnoh
 #pragma once
 
 #include <Eigen/Dense>
