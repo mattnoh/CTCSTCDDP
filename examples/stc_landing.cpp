@@ -63,9 +63,9 @@ const double TILT_LAND = 0.95 * DEG, GS_TAN = std::tan(15.0 * DEG);
 
 // CTCS: per-interval budget on the sum of the dimensionless integrals, and the length
 // the glideslope residual [m] is measured in.
-constexpr double EPS_INT = 3e-6, GS_LENGTH = 0.1;
+constexpr double EPS_INT = 1e-6, GS_LENGTH = 0.1;
 
-// Solver
+// Solver (ProxDDP, filter step acceptance)
 constexpr double TOL = 1e-4, MU_INIT = 0.1;
 constexpr std::size_t MAX_ITERS = 3000;
 
@@ -361,7 +361,9 @@ int main(int argc, char **argv) {
     xs[k + 1](2) = std::max(xs[k + 1](2), 0.0);
   }
 
-  aligator::context::SolverProxDDP solver(TOL, MU_INIT, MAX_ITERS);
+  // Filter step acceptance (Aligator option): tuned on s00-s29, checked on s30-s99.
+  aligator::context::SolverProxDDP solver(TOL, MU_INIT, MAX_ITERS, aligator::QUIET,
+                                          aligator::StepAcceptanceStrategy::FILTER);
   solver.setNumThreads(1);
   solver.setup(problem);
   const auto t0 = std::chrono::steady_clock::now();
