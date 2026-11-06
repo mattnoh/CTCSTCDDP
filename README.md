@@ -57,49 +57,28 @@ integrating an extra state `y' = H` with the same RK4 steps (checked in `tests/`
 └── CMakeLists.txt
 ```
 
-## Building
-
-### 1. Aligator
-Pick one of the two.
-
-**From the submodule** (C++ only, no Python):
+## Installation
 ```bash
-git clone --recursive git@github.com:mattnoh/CTCSTCDDP.git && cd CTCSTCDDP   # or: git submodule update --init --recursive
-cmake -S aligator -B aligator/build -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX=$PWD/install \
-  -DBUILD_PYTHON_INTERFACE=OFF -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_DOCUMENTATION=OFF \
-  -DBUILD_BENCHMARKS=OFF -DBUILD_WITH_PINOCCHIO_SUPPORT=OFF \
-  -DCMAKE_PREFIX_PATH=<prefix with Eigen, Boost, fmt, mimalloc>     # e.g. a conda env
-cmake --build aligator/build -j && cmake --install aligator/build
+git clone --recursive https://github.com/mattnoh/CTCSTCDDP.git
+cd CTCSTCDDP
 ```
-Aligator's dependencies are listed in its README. A conda env with
-`eigen boost fmt mimalloc` covers them.
-
-**Prebuilt:** `conda install -c conda-forge aligator`. conda-forge can lag behind upstream main,
-so check the version.
-
-### 2. This repo
+`--recursive` also fetches Aligator into `aligator/`. Install it by following
+[Aligator's instructions](https://github.com/Simple-Robotics/aligator#installation), then build
+this repo against that install:
 ```bash
-cmake -S . -B build -DCMAKE_PREFIX_PATH="$PWD/install;<deps prefix>"
+cmake -S . -B build -DCMAKE_PREFIX_PATH=<aligator install prefix>
 cmake --build build -j
-export LD_LIBRARY_PATH=$PWD/install/lib:<deps prefix>/lib
-ctest --test-dir build --output-on-failure
-./build/pointmass_sphere
+ctest --test-dir build
 ./build/stc_landing
 ```
-`LD_LIBRARY_PATH` is needed because `libaligator.so` carries `RUNPATH=$ORIGIN`. An
-executable's rpath therefore cannot resolve libaligator's own dependencies (libfmt, libmimalloc).
+If the run cannot find Aligator's libraries, add its `lib` folder and that of its dependencies to
+`LD_LIBRARY_PATH`.
 
-If more than one Aligator is on `CMAKE_PREFIX_PATH` (for example the conda env ships an older
-one), put the install you want first and check `aligator_DIR` in `build/CMakeCache.txt`.
-
-### Use it from your own project
+To use the interface in your own project (C++17, header-only):
 ```cmake
-add_subdirectory(ctcs_stc)                  # or copy include/ into your tree
+add_subdirectory(CTCSTCDDP)
 target_link_libraries(my_ocp PRIVATE ctcs_stc::ctcs_stc)
 ```
-C++17. There is no Python binding. The triggers and consequences are C++ lambdas called inside
-the quadrature, so a Python callback there would be slow.
 
 ## Usage
 See [`include/ctcs_stc/USAGE.md`](include/ctcs_stc/USAGE.md) for how to write an OCP with this interface.

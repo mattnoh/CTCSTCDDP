@@ -24,26 +24,7 @@ the squared density `[-g]_+^2 [c]_+^2` from Uzun et al. 2025.
 
 ## 1. Build and link
 
-```bash
-# Aligator (once), from the submodule (git submodule update --init --recursive)
-cmake -S aligator -B aligator/build -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX=$PWD/install \
-  -DBUILD_PYTHON_INTERFACE=OFF -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_DOCUMENTATION=OFF \
-  -DBUILD_BENCHMARKS=OFF -DBUILD_WITH_PINOCCHIO_SUPPORT=OFF \
-  -DCMAKE_PREFIX_PATH=<prefix with Eigen, Boost, fmt, mimalloc>     # e.g. a conda env
-cmake --build aligator/build -j && cmake --install aligator/build
-
-# your project
-cmake -S . -B build -DCMAKE_PREFIX_PATH="$PWD/install;<deps prefix>"
-export LD_LIBRARY_PATH=$PWD/install/lib:<deps prefix>/lib   # libaligator has RUNPATH=$ORIGIN
-```
-```cmake
-find_package(aligator REQUIRED)
-add_subdirectory(ctcs_stc)                      # or add include/ to your include path
-target_link_libraries(my_ocp PRIVATE ctcs_stc::ctcs_stc)
-```
-If several Aligator installs are on the prefix path (a conda env often ships an older one),
-put yours first and check `aligator_DIR` in `CMakeCache.txt`.
+See Installation in the [README](../../README.md).
 
 ---
 
