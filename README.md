@@ -37,6 +37,7 @@ integrating an extra state `y' = H` with the same RK4 steps (checked in `tests/`
 include/ctcs_stc/spec.hpp                 authoring: implications, forms, eps, pointwise density
 include/ctcs_stc/integrator_rk4.hpp       RK4 integrator for Aligator ODE models (free time, substeps, projection)
 include/ctcs_stc/interval_constraint.hpp  the rows: an aligator::StageFunctionTpl built from a Spec and the integrator
+include/ctcs_stc/USAGE.md                 how to use the interface with Aligator
 examples/pointmass_sphere.cpp             CTCS: point mass past a sphere (Elango 2025 setup)
 examples/stc_landing.cpp                  STC: quadrotor landing, free final time, 8 rules in one CTCS row
 examples/point_mass.hpp                   point-mass ODE and costs (pointmass_sphere)
@@ -91,6 +92,8 @@ C++17. There is no Python binding. The triggers and consequences are C++ lambdas
 the quadrature, so a Python callback there would be slow.
 
 ## Writing an OCP
+
+Full usage guide (API tables, options, scaling, auditing, pitfalls): [`include/ctcs_stc/USAGE.md`](include/ctcs_stc/USAGE.md).
 
 ### 1. Write the model once, as an Aligator ODE
 ```cpp
