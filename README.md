@@ -11,24 +11,13 @@ A header-only C++ interface that adds two kinds of path constraint to
 Each one becomes an ordinary Aligator stage constraint, a row `c_k(x_k, u_k) <= 0` on stage
 `k`, so the solver itself is unchanged.
 
-## The method (credit where it is due)
-None of the formulation is new here. This repo only implements it for DDP.
-
-- Solver: [Aligator](https://github.com/Simple-Robotics/aligator) and its ProxDDP solver
-  (Jallet et al., *IEEE T-RO* 2025, [doi:10.1109/TRO.2025.3554437](https://doi.org/10.1109/TRO.2025.3554437)),
-  used unmodified as a git submodule.
-- STC and its nodal form `[-g]_+ * c <= 0`: Szmuk, Reynolds & Açıkmeşe, *JGCD* 43(8), 2020,
-  [doi:10.2514/1.G004549](https://doi.org/10.2514/1.G004549).
-- Continuous-time enforcement by an integrated exterior penalty with an `eps` budget per
-  interval, the non-augmented interval form (eq. 34) and the pointwise violation bound
-  (Theorem 10): Elango et al., *Automatica* 180, 2025,
-  [doi:10.1016/j.automatica.2025.112464](https://doi.org/10.1016/j.automatica.2025.112464).
-- Squared-positive-part STC density `[-g]_+^2 [c]_+^2`, integrated per interval (CT-cSTC):
-  Uzun, Açıkmeşe & Carson, AIAA SciTech 2025,
-  [doi:10.2514/6.2025-1895](https://doi.org/10.2514/6.2025-1895); reference implementation
-  [UW-ACL/CT-cSTC](https://github.com/UW-ACL/CT-cSTC).
-
-BibTeX for all of these is in [`CITATIONS.bib`](CITATIONS.bib).
+## Method
+This repo implements published methods; it does not introduce a new formulation:
+state-triggered constraints (STC, Szmuk et al.), continuous-time constraint satisfaction
+(CTCS, Elango et al.), and continuous-time compound state-triggered constraints (CT-cSTC,
+Uzun et al., [UW-ACL/CT-cSTC](https://github.com/UW-ACL/CT-cSTC)). The solver is
+[Aligator](https://github.com/Simple-Robotics/aligator)'s ProxDDP, used unmodified as a git
+submodule. See [Citing](#citing).
 
 For interval `k` the interface computes
 
@@ -54,7 +43,7 @@ examples/stc_landing.cpp                  STC: quadrotor landing, free final tim
 examples/point_mass.hpp                   point-mass ODE and costs (pointmass_sphere)
 examples/quadrotor.hpp                    quadrotor ODE, control scaling, quaternion projection (stc_landing)
 tests/test_spec.cpp                       FD Jacobians (integrator, rows), row == augmented accumulator, curvature
-third_party/aligator                      Aligator as a git submodule (upstream main)
+aligator/                                 Aligator as a git submodule (upstream main)
 ```
 
 ## Building
@@ -65,12 +54,12 @@ Pick one of the two.
 **From the submodule** (C++ only, no Python):
 ```bash
 git clone --recursive git@github.com:mattnoh/CTCSTCDDP.git && cd CTCSTCDDP   # or: git submodule update --init --recursive
-cmake -S third_party/aligator -B third_party/aligator/build -DCMAKE_BUILD_TYPE=Release \
+cmake -S aligator -B aligator/build -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=$PWD/install \
   -DBUILD_PYTHON_INTERFACE=OFF -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_DOCUMENTATION=OFF \
   -DBUILD_BENCHMARKS=OFF -DBUILD_WITH_PINOCCHIO_SUPPORT=OFF \
   -DCMAKE_PREFIX_PATH=<prefix with Eigen, Boost, fmt, mimalloc>     # e.g. a conda env
-cmake --build third_party/aligator/build -j && cmake --install third_party/aligator/build
+cmake --build aligator/build -j && cmake --install aligator/build
 ```
 Aligator's dependencies are listed in its README. A conda env with
 `eigen boost fmt mimalloc` covers them.
@@ -205,6 +194,61 @@ Jacobians reshuffle which ICs fail, so judge a setting on many ICs, not a handfu
   R^4 block renormalized after each step, not as a manifold state.
 - The spec caches its last evaluation on exact `(x, u)`. If the interval dynamics read
   externals that change between solves, rebuild the stages.
+
+## Citing
+If you use this interface, please cite the works it builds on:
+
+```bibtex
+% Solver
+@misc{aligatorweb,
+  author = {Jallet, Wilson and Bambade, Antoine and El Kazdadi, Sarah and Carpentier, Justin and Mansard, Nicolas},
+  title  = {aligator},
+  url    = {https://github.com/Simple-Robotics/aligator}
+}
+
+@article{jalletPROXDDPProximalConstrained2025,
+  title   = {PROXDDP: Proximal Constrained Trajectory Optimization},
+  author  = {Jallet, Wilson and Bambade, Antoine and Arlaud, Etienne and {El-Kazdadi}, Sarah and Mansard, Nicolas and Carpentier, Justin},
+  year    = {2025},
+  journal = {IEEE Transactions on Robotics},
+  volume  = {41},
+  pages   = {2605--2624},
+  doi     = {10.1109/TRO.2025.3554437}
+}
+
+% State-triggered constraints (STC)
+@article{szmukSuccessiveConvexificationRealTime2020,
+  title   = {Successive Convexification for Real-Time 6-{DoF} Powered Descent Guidance with State-Triggered Constraints},
+  author  = {Szmuk, Michael and Reynolds, Taylor P. and A{\c{c}}{\i}kme{\c{s}}e, Beh{\c{c}}et},
+  journal = {Journal of Guidance, Control, and Dynamics},
+  volume  = {43},
+  number  = {8},
+  pages   = {1399--1413},
+  year    = {2020},
+  doi     = {10.2514/1.G004549}
+}
+
+% Continuous-time constraint satisfaction (CTCS)
+@article{elangoContinuoustimeSuccessiveConvexification2025,
+  title   = {Continuous-time successive convexification for constrained trajectory optimization},
+  author  = {Elango, Purnanand and Luo, Dayou and Kamath, Abhinav G. and Uzun, Samet and Kim, Taewan and A{\c{c}}{\i}kme{\c{s}}e, Beh{\c{c}}et},
+  journal = {Automatica},
+  volume  = {180},
+  pages   = {112464},
+  year    = {2025},
+  doi     = {10.1016/j.automatica.2025.112464}
+}
+
+% Continuous-time compound state-triggered constraints (CT-cSTC)
+@inproceedings{uzunSequentialConvexProgramming2025,
+  title     = {Sequential Convex Programming for 6-{DoF} Powered Descent Guidance with Continuous-Time Compound State-Triggered Constraints},
+  author    = {Uzun, Samet and A{\c{c}}{\i}kme{\c{s}}e, Beh{\c{c}}et and Carson, John M.},
+  booktitle = {AIAA SciTech 2025 Forum},
+  year      = {2025},
+  doi       = {10.2514/6.2025-1895},
+  note      = {Code: \url{https://github.com/UW-ACL/CT-cSTC}}
+}
+```
 
 ## Author and license
 Author: mattnoh. There is no license file yet. Without one, others cannot legally reuse the

@@ -1,4 +1,4 @@
-[submodule "third_party/aligator"]
-	path = third_party/aligator
+[submodule "aligator"]
+	path = aligator
 	url = https://github.com/Simple-Robotics/aligator
 	branch = main

@@ -26,12 +26,12 @@ the squared density `[-g]_+^2 [c]_+^2` from Uzun et al. 2025.
 
 ```bash
 # Aligator (once), from the submodule (git submodule update --init --recursive)
-cmake -S third_party/aligator -B third_party/aligator/build -DCMAKE_BUILD_TYPE=Release \
+cmake -S aligator -B aligator/build -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=$PWD/install \
   -DBUILD_PYTHON_INTERFACE=OFF -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_DOCUMENTATION=OFF \
   -DBUILD_BENCHMARKS=OFF -DBUILD_WITH_PINOCCHIO_SUPPORT=OFF \
   -DCMAKE_PREFIX_PATH=<prefix with Eigen, Boost, fmt, mimalloc>     # e.g. a conda env
-cmake --build third_party/aligator/build -j && cmake --install third_party/aligator/build
+cmake --build aligator/build -j && cmake --install aligator/build
 
 # your project
 cmake -S . -B build -DCMAKE_PREFIX_PATH="$PWD/install;<deps prefix>"
