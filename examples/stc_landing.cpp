@@ -21,7 +21,7 @@
 //   in the column layout of the thesis graders.
 #include "quadrotor.hpp"
 
-#include "ctcs_stc/stage_function.hpp"
+#include "ctcs_stc/interval_constraint.hpp"
 
 #include <aligator/core/cost-abstract.hpp>
 #include <aligator/core/stage-model.hpp>
@@ -173,9 +173,9 @@ struct Bounds : aligator::StageFunctionTpl<double> {
 };
 
 // ── The STC / CTCS row ───────────────────────────────────────────────────────
-ctcs_stc::Spec<double> landingRules() {
+ctcs_stc::Spec landingRules() {
   // eps = 1 with weights 1/EPS_INT: the row reads sum_i I_i / EPS_INT - 1 <= 0.
-  ctcs_stc::Spec<double> spec(ctcs_stc::Form::Density, 1.0);
+  ctcs_stc::Spec spec(ctcs_stc::Form::Density, 1.0);
   const double w = 1.0 / EPS_INT;
   const double lt = std::pow(std::sin(0.5 * TILT_PATH), 2), ld = std::pow(std::sin(0.5 * TILT_LAND), 2);
   auto Z = [] { return V::Zero(NX).eval(); };
@@ -249,21 +249,6 @@ ctcs_stc::Spec<double> landingRules() {
                    never_u)
       .scale(1.0 / GS_LENGTH).weight(w);
 
-  // The same model the discrete step integrates, seen through the control scaling.
-  ctcs_stc::IntervalDynamics<double> dyn;
-  dyn.xdot = [](const V &x, const V &u, double) { V f = V::Zero(NX); f.head(NXP) = xdot(x.head(NXP), physical(u)); return f; };
-  dyn.fx = [](const V &x, const V &u, double) {
-    M a = M::Zero(NX, NX);
-    a.topLeftCorner(NXP, NXP) = A(x.head(NXP), physical(u));
-    return a;
-  };
-  dyn.fu = [](const V &x, const V &, double) {
-    M b = M::Zero(NX, NU);
-    b.topLeftCorner(NXP, NUP) = B(x.head(NXP)) * U_SCALE().asDiagonal();
-    return b;
-  };
-  dyn.idx_theta = IDX_THETA;  // free time: u(4) is the interval length
-  spec.setIntervalDynamics(dyn);
   return spec;
 }
 
@@ -306,7 +291,7 @@ V rk4(const V &x, const V &up, double h) {
 }
 
 /// Thesis-grader CSVs: nodes, and SUB sub-samples per interval.
-void writeCsv(const std::string &prefix, const ctcs_stc::Spec<double> &rules, const std::vector<V> &xs,
+void writeCsv(const std::string &prefix, const ctcs_stc::Spec &rules, const std::vector<V> &xs,
               const std::vector<V> &us) {
   const char *hdr = "node,t_acc,rx,ry,rz,rvx,rvy,rvz,qw,qx,qy,qz,wx,wy,wz,fz_B,Mx,My,Mz,Theta,ctcs_integrand\n";
   std::FILE *fn = std::fopen((prefix + ".csv").c_str(), "w");
@@ -349,7 +334,8 @@ int main(int argc, char **argv) {
   x0 << ic[0], ic[1], ic[2], ic[3], ic[4], ic[5], 1, 0, 0, 0, 0, 0, 0, 0;
 
   aligator::context::VectorSpace space(NX);
-  Dynamics dynamics(space);
+  // Free time: the interval length is u(IDX_THETA); quaternion renormalized after each step.
+  const ctcs_stc::IntegratorRK4 dynamics(ODE(space), ctcs_stc::FreeTime{IDX_THETA}, 1, quaternionProjection());
   StageCost cost(space);
   TerminalCost terminal(space);
   const auto rules = landingRules();
@@ -358,7 +344,7 @@ int main(int argc, char **argv) {
   for (int k = 0; k < N; ++k) {
     aligator::context::StageModel stage(cost, dynamics);
     stage.addConstraint(Bounds(), aligator::NegativeOrthantTpl<double>());
-    stage.addConstraint(ctcs_stc::StageFunction(NX, NU, rules), aligator::NegativeOrthantTpl<double>());
+    stage.addConstraint(ctcs_stc::IntervalConstraint(rules, dynamics), aligator::NegativeOrthantTpl<double>());
     stages.emplace_back(stage);
   }
   aligator::context::TrajOptProblem problem(x0, stages, terminal);

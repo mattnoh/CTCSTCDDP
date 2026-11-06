@@ -8,7 +8,7 @@
 // Row: I_k / EPS - 1 <= 0  (weight 1/EPS, spec eps 1).
 #include "point_mass.hpp"
 
-#include "ctcs_stc/stage_function.hpp"
+#include "ctcs_stc/interval_constraint.hpp"
 
 #include <aligator/core/stage-model.hpp>
 #include <aligator/core/traj-opt-problem.hpp>
@@ -28,8 +28,8 @@ const Vec3 OBSTACLE(2.5 + 0.5 / std::sqrt(2.0), 2.5 - 0.5 / std::sqrt(2.0), 5.5)
 // Elango 2025 Theorem 10: pointwise violation <= (4 eps omega / R)^(1/3) R for this density.
 const double DELTA = RADIUS * std::cbrt(4.0 * EPS * OMEGA / RADIUS);
 
-ctcs_stc::Spec<double> keepOut() {
-  ctcs_stc::Spec<double> spec(ctcs_stc::Form::Density, 1.0);
+ctcs_stc::Spec keepOut() {
+  ctcs_stc::Spec spec(ctcs_stc::Form::Density, 1.0);
   spec.add("sphere")
       .triggerWhenNegative([](const V &) { return -1.0; }, [](const V &) { return V::Zero(NX).eval(); })
       .consequence(
@@ -42,7 +42,6 @@ ctcs_stc::Spec<double> keepOut() {
           },
           [](const V &, const V &) { return V::Zero(NU).eval(); })
       .weight(1.0 / EPS);
-  spec.setIntervalDynamics(intervalDynamics(DT, SUBSTEPS));
   return spec;
 }
 }  // namespace
@@ -52,7 +51,7 @@ int main() {
   x0 << 5, 5, 10, -0.2, -0.2, -0.3;
   xf << 0, 0, 1, 0, 0, 0;
   Space space(NX);
-  Dynamics dynamics(space, DT);
+  const ctcs_stc::IntegratorRK4 dynamics(ODE(space), DT, SUBSTEPS);
   EffortCost effort(space, 1e-3 * DT, V::Zero(NU));
   TerminalCost terminal(space, 1e3, xf);
   const auto spec = keepOut();
@@ -60,7 +59,7 @@ int main() {
   std::vector<xyz::polymorphic<aligator::context::StageModel>> stages;
   for (int k = 0; k < K; ++k) {
     aligator::context::StageModel stage(effort, dynamics);
-    stage.addConstraint(ctcs_stc::StageFunction(NX, NU, spec), aligator::NegativeOrthantTpl<double>());
+    stage.addConstraint(ctcs_stc::IntervalConstraint(spec, dynamics), aligator::NegativeOrthantTpl<double>());
     stages.emplace_back(stage);
   }
   aligator::context::TrajOptProblem problem(x0, stages, terminal);

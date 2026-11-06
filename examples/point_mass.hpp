@@ -1,14 +1,12 @@
 // Point mass shared by the examples and tests: x = [p; v] in R^6, u = commanded
-// acceleration in R^3, gravity along -z.  The discrete map is the exact flow for a
-// control held constant over dt, and `intervalDynamics` is its continuous
-// counterpart: the spec must integrate the SAME model the solver steps.
+// acceleration in R^3, gravity along -z.  Written once as an Aligator ODE; the
+// stage dynamics are ctcs_stc::IntegratorRK4 on it (exact here: the flow is
+// quadratic in time under a constant control).
 #pragma once
 
-#include "ctcs_stc/spec.hpp"
-
 #include <aligator/core/cost-abstract.hpp>
-#include <aligator/core/explicit-dynamics.hpp>
 #include <aligator/core/vector-space.hpp>
+#include <aligator/modelling/dynamics/ode-abstract.hpp>
 
 #include <Eigen/Dense>
 
@@ -21,22 +19,20 @@ using Vec3 = Eigen::Vector3d;
 using Space = aligator::context::VectorSpace;
 const Vec3 GRAVITY(0.0, 0.0, -9.81);
 
-struct Dynamics : aligator::ExplicitDynamicsModelTpl<double> {
-  using Base = aligator::ExplicitDynamicsModelTpl<double>;
-  using Data = aligator::ExplicitDynamicsDataTpl<double>;
-  double dt;
-  Dynamics(const Space &space, double dt_) : Base(space, NU), dt(dt_) {}
-  void forward(const ConstVectorRef &x, const ConstVectorRef &u, Data &data) const override {
-    const Vec3 a = u + GRAVITY;
-    data.xnext_.head<3>() = x.head<3>() + dt * x.tail<3>() + 0.5 * dt * dt * a;
-    data.xnext_.tail<3>() = x.tail<3>() + dt * a;
+/// xdot = [v; u + g]
+struct ODE : aligator::dynamics::ODEAbstractTpl<double> {
+  using Base = aligator::dynamics::ODEAbstractTpl<double>;
+  using Data = aligator::dynamics::ContinuousDynamicsDataTpl<double>;
+  explicit ODE(const Space &space) : Base(space, NU) {}
+  void forward(const ConstVectorRef &x, const ConstVectorRef &u, Data &d) const override {
+    d.xdot_.head<3>() = x.tail<3>();
+    d.xdot_.tail<3>() = u.head<3>() + GRAVITY;
   }
-  void dForward(const ConstVectorRef &, const ConstVectorRef &, Data &data) const override {
-    data.Jx().setIdentity();
-    data.Jx().topRightCorner<3, 3>() = dt * Eigen::Matrix3d::Identity();
-    data.Ju().setZero();
-    data.Ju().topRows<3>() = 0.5 * dt * dt * Eigen::Matrix3d::Identity();
-    data.Ju().bottomRows<3>() = dt * Eigen::Matrix3d::Identity();
+  void dForward(const ConstVectorRef &, const ConstVectorRef &, Data &d) const override {
+    d.Jx_.setZero();
+    d.Jx_.topRightCorner(3, 3).setIdentity();
+    d.Ju_.setZero();
+    d.Ju_.bottomLeftCorner(3, 3).setIdentity();
   }
 };
 
@@ -83,31 +79,6 @@ struct TerminalCost : aligator::CostAbstractTpl<double> {
     d.Luu_.setZero();
   }
 };
-
-/// Continuous dynamics xdot = [v; u + g] for the spec, fixed step dt.
-inline ctcs_stc::IntervalDynamics<double> intervalDynamics(double dt, int substeps) {
-  ctcs_stc::IntervalDynamics<double> d;
-  d.xdot = [](const V &x, const V &u, double) {
-    V f(NX);
-    f.head<3>() = x.tail<3>();
-    f.tail<3>() = u.head<3>() + GRAVITY;
-    return f;
-  };
-  d.fx = [](const V &, const V &, double) {
-    M A = M::Zero(NX, NX);
-    A.topRightCorner(3, 3).setIdentity();
-    return A;
-  };
-  d.fu = [](const V &, const V &u, double) {
-    M B = M::Zero(NX, u.size());
-    B.bottomLeftCorner(3, 3).setIdentity();
-    return B;
-  };
-  d.idx_theta = -1;
-  d.dt = dt;
-  d.substeps = substeps;
-  return d;
-}
 
 /// Exact state at time s into an interval that starts at x with control u.
 inline V flow(const V &x, const V &u, double s) {
