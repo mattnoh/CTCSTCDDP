@@ -38,18 +38,23 @@ integrating an extra state `y' = H` with the same RK4 steps (checked in `tests/`
 
 ## Layout
 ```
-include/ctcs_stc/spec.hpp                 authoring: implications, forms, eps, pointwise density
-include/ctcs_stc/integrator_rk4.hpp       RK4 integrator for Aligator ODE models (free time, substeps, projection)
-include/ctcs_stc/interval_constraint.hpp  the rows: an aligator::StageFunctionTpl built from a Spec and the integrator
-include/ctcs_stc/USAGE.md                 how to use the interface with Aligator
-CITATIONS.bib                             BibTeX: Aligator/ProxDDP, STC, CTCS, CT-cSTC
-examples/pointmass_sphere.cpp             CTCS: point mass past a sphere (Elango 2025 setup)
-examples/stc_landing.cpp                  STC: quadrotor landing, free final time, 8 rules in one CTCS row
-examples/point_mass.hpp                   point-mass ODE and costs (pointmass_sphere)
-examples/quadrotor.hpp                    quadrotor ODE, control scaling, quaternion projection (stc_landing)
-tests/test_spec.cpp                       FD Jacobians (integrator, rows), row == augmented accumulator, curvature
-aligator/                                 Aligator as a git submodule (upstream main)
-docs/                                     figures
+.
+├── include/ctcs_stc/
+│   ├── spec.hpp                  rules: triggers, consequences, forms, eps
+│   ├── integrator_rk4.hpp        RK4 for Aligator ODE models (free time, substeps, projection)
+│   ├── interval_constraint.hpp   the rows: aligator::StageFunctionTpl from a Spec and the integrator
+│   └── USAGE.md                  how to use the interface
+├── examples/
+│   ├── pointmass_sphere.cpp      CTCS: point mass past a sphere (Elango 2025 setup)
+│   ├── point_mass.hpp            point-mass ODE and costs
+│   ├── stc_landing.cpp           STC: quadrotor landing, free final time, 8 rules in one CTCS row
+│   └── quadrotor.hpp             quadrotor ODE, control scaling, quaternion projection
+├── tests/
+│   └── test_spec.cpp             FD Jacobians, row == augmented accumulator, curvature
+├── docs/                         figures
+├── aligator/                     Aligator as a git submodule (upstream main)
+├── CITATIONS.bib                 BibTeX: Aligator/ProxDDP, STC, CTCS, CT-cSTC
+└── CMakeLists.txt
 ```
 
 ## Building
