@@ -166,7 +166,3 @@ If you use this interface, please cite the works it builds on:
   note      = {Code: \url{https://github.com/UW-ACL/CT-cSTC}}
 }
 ```
-
-## Author and license
-Author: mattnoh. There is no license file yet. Without one, others cannot legally reuse the
-code. Add one (Aligator uses BSD-2) before publishing if you want it reused.
