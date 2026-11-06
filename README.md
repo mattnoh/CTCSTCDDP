@@ -14,11 +14,21 @@ Each one becomes an ordinary Aligator stage constraint, a row `c_k(x_k, u_k) <= 
 ## The method (credit where it is due)
 None of the formulation is new here. This repo only implements it for DDP.
 
-- STC and its nodal form `[-g]_+ * c <= 0`: Szmuk, Reynolds & Açıkmeşe, 2018.
+- Solver: [Aligator](https://github.com/Simple-Robotics/aligator) and its ProxDDP solver
+  (Jallet et al., *IEEE T-RO* 2025, [doi:10.1109/TRO.2025.3554437](https://doi.org/10.1109/TRO.2025.3554437)),
+  used unmodified as a git submodule.
+- STC and its nodal form `[-g]_+ * c <= 0`: Szmuk, Reynolds & Açıkmeşe, *JGCD* 43(8), 2020,
+  [doi:10.2514/1.G004549](https://doi.org/10.2514/1.G004549).
 - Continuous-time enforcement by an integrated exterior penalty with an `eps` budget per
-  interval, and the pointwise violation bound (Theorem 10): Elango et al., *Automatica* 2025.
-- Squared-positive-part STC density `[-g]_+^2 [c]_+^2`, integrated per interval: Uzun,
-  Açıkmeşe & Carson, AIAA SciTech 2025 (CT-cSTC).
+  interval, the non-augmented interval form (eq. 34) and the pointwise violation bound
+  (Theorem 10): Elango et al., *Automatica* 180, 2025,
+  [doi:10.1016/j.automatica.2025.112464](https://doi.org/10.1016/j.automatica.2025.112464).
+- Squared-positive-part STC density `[-g]_+^2 [c]_+^2`, integrated per interval (CT-cSTC):
+  Uzun, Açıkmeşe & Carson, AIAA SciTech 2025,
+  [doi:10.2514/6.2025-1895](https://doi.org/10.2514/6.2025-1895); reference implementation
+  [UW-ACL/CT-cSTC](https://github.com/UW-ACL/CT-cSTC).
+
+BibTeX for all of these is in [`CITATIONS.bib`](CITATIONS.bib).
 
 For interval `k` the interface computes
 
@@ -38,6 +48,7 @@ include/ctcs_stc/spec.hpp                 authoring: implications, forms, eps, p
 include/ctcs_stc/integrator_rk4.hpp       RK4 integrator for Aligator ODE models (free time, substeps, projection)
 include/ctcs_stc/interval_constraint.hpp  the rows: an aligator::StageFunctionTpl built from a Spec and the integrator
 include/ctcs_stc/USAGE.md                 how to use the interface with Aligator
+CITATIONS.bib                             BibTeX: Aligator/ProxDDP, STC, CTCS, CT-cSTC
 examples/pointmass_sphere.cpp             CTCS: point mass past a sphere (Elango 2025 setup)
 examples/stc_landing.cpp                  STC: quadrotor landing, free final time, 8 rules in one CTCS row
 examples/point_mass.hpp                   point-mass ODE and costs (pointmass_sphere)

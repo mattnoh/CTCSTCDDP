@@ -1,3 +1,9 @@
+The method is not new here: STC (Szmuk, Reynolds & Açıkmeşe, JGCD 2020), the integrated
+exterior penalty with a per-interval ε and its pointwise bound (Elango et al., Automatica 2025,
+eq. 34 and Thm. 10), and the squared density `[-g]_+^2 [c]_+^2` of CT-cSTC (Uzun, Açıkmeşe &
+Carson, AIAA SciTech 2025; code at https://github.com/UW-ACL/CT-cSTC). The solver is
+Aligator's ProxDDP (https://github.com/Simple-Robotics/aligator). BibTeX: `CITATIONS.bib`.
+
 # Using ctcs_stc with Aligator
 
 This folder holds the whole interface: three headers, no library to link besides Aligator.
